@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🔥FLAMES🔥</title>
+
+  <link rel="stylesheet" href="./css/home.css">
+
+  <script defer type="text/javascript" src="./scripts/home.js"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <!--main container-->
+    <div class="gift-card-box">
+      <!--white area which holda the card & UI-->
+      <div id="result" class="confirmation">
+        <!--section only seen after card is sent-->
+        <h1><b>Resut</b></h1>
+        <h4 id="text"></h4>
+      </div>
+      <!--card iteself - parent container-->
+      <div class="card">
+        <!--design for the card front. Bg image is in the css-->
+        <div class="front">
+          <!--logo container-->
+          <div class="front-logo-cnt">
+            <!--apple logo-->
+            <img src="images/logo.jpg" alt="Fire logo" width="100%" height="100%">
+            <!--p class="card-description">$100</p-->
+          </div>
+        </div>
+        <!--design for the back of the card-->
+        <div class="back">
+          <!--input fields-->
+          <form class="form" autocomplete="off" novalidate>
+            <fieldset>
+              <label for="card-number">Name 1:</label>
+              <input type="text" class="input-card-info" maxlength="30" autofocus />
+            </fieldset>
+            <fieldset>
+              <label for="card-holder">Name 2:</label>
+              <input type="text" class="input-card-info" maxlength="30" />
+            </fieldset>
+          </form>
+        </div>
+      </div>
+      <!--buttons parent-->
+      <div class="button-cnt">
+        <!--initial button-->
+        <button id="btn-card-flip" class="primary-cta">Play</button>
+        <!--the two buttons which appear once card is flipped-->
+        <button id="close" class="secondary-cta secondary-cta--done hidden">Close</button>
+        <button id="btn-card-send" class="secondary-cta secondary-cta--send hidden">Match</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
