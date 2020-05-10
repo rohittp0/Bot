@@ -1,0 +1,3 @@
+tasks:
+  - before: npm install firebase-tools -g && firebase login --no-localhost
+  - init: cd functions && npm install
