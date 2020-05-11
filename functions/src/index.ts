@@ -1,12 +1,144 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
+import { VIDEO_ID, TITLE, DESCRIPTION, snippet, getEntity } from './constants'
+import * as readline from 'readline';
+import { google } from 'googleapis';
+const fs = require('fs');
+// If modifying these scopes, delete your previously saved credentials
+// at ~/.credentials/youtube-nodejs-quickstart.json
+const SCOPES = ['https://www.googleapis.com/auth/youtube'];
+const CRED_DIR = __dirname + '/.credentials/';
+const TOKEN_PATH = CRED_DIR + 'youtube-data-v3.json';
+const JSON_PATH = CRED_DIR + 'credentials.json'
+/**
+ * Create an OAuth2 client with the credentials from json, and then return a 
+ * promise which resolves to OAuth2 object
+ * 
+ * @param {String} path The path to client credentials JSON file.
+ */
+async function login() {
+    // Load client secrets from a local file.
+    let credentials = JSON.parse(await fs.promises.readFile(JSON_PATH))
+    // Authorize a client with the loaded credentials, then call the YouTube API.
+    var clientSecret = credentials.installed.client_secret;
+    var clientId = credentials.installed.client_id;
+    var redirectUrl = credentials.installed.redirect_uris[0];
+    var oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUrl);
+    try {
+        //Check if we have token saved.
+        let token = await fs.promises.readFile(TOKEN_PATH)
+        //Found saved token so use it.
+        oauth2Client.credentials = JSON.parse(token);
+        return oauth2Client;
+    } catch (error) {
+        //No saved token found so get a new one.
+        return getNewToken(oauth2Client);
+    }
+}
 
-// Start writing Firebase Functions
-// https://firebase.google.com/docs/functions/typescript
+/**
+ * Get and store new token after prompting for user authorization, and then
+ * return a promise which resolves to OAuth2 object
+ *
+ * @param {google.auth.OAuth2} oauth2Client The OAuth2 client to get token for.
+ * @returns {Promise<google.auth.OAuth2>}
+ */
+function getNewToken(oauth2Client: any): Promise<any> {
+    var authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: SCOPES
+    });
+    console.log('Authorize this app by visiting this url: ', authUrl);
+    var rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    return new Promise((resolve, reject) =>
+        rl.question('Enter the code from that page here: ', (code: any) => {
+            rl.close();
+            oauth2Client.getToken(code, (err: any, token: any) => {
+                if (err) reject(err)
+                else {
+                    oauth2Client.credentials = token;
+                    //Store token to disk be used in later program executions.
+                    fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err: any) => {
+                        if (err) reject(err);
+                        else {
+                            console.log('Token stored to ' + TOKEN_PATH);
+                            resolve(oauth2Client);
+                        }
+                    });
+                }
+            });
+        }));
+}
 
-const VIDEO_ID = "&id=_ylFqO-QZL0"
-const API_KEY = "&key="
-const API_URL = "https://www.googleapis.com/youtube/v3/videos?part=statistics"
 
-export const updateViews = functions.https.onRequest((request, response) => {
- response.send("Hello from Firebase!");
+/**
+ * Gets the statistics of the video with video id VIDEO_ID
+ *
+ * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ */
+async function getDetails(auth: any) {
+    const service = google.youtube('v3');
+
+    let response = await service.videos.list({
+        auth: auth,
+        id: VIDEO_ID,
+        part: 'statistics'
+    });
+    if (response.data.items)
+        return response.data.items[0].statistics;
+    else throw "could not get view count";
+}
+
+/**
+ * Gets the statistics of the video with video id VIDEO_ID
+ *
+ * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ * @returns {Promise<any>} serevrResponse
+ */
+async function setDetails(auth: any, snippet: any): Promise<any> {
+    const service = google.youtube('v3');
+    return service.videos.update({
+        auth: auth,
+        part: 'snippet',
+        requestBody: {
+            id: VIDEO_ID,
+            snippet: snippet
+        }
+    });
+}
+
+/**
+ * Creates a snippet object to be used to update the video.
+ *
+ * @param {object} statistics The statistics object to get values from.
+ * @returns {snippet} serevrResponse
+ */
+function getSnippet(statistics: any): snippet {
+    let snippet: snippet = {
+        categoryId: 27,
+        defaultLanguage: 'en'
+    }
+    if (TITLE.CHANGE)
+        snippet.title = TITLE.PREFIX + getEntity(TITLE.ENTITY_ID, statistics) + TITLE.POSTFIX
+    if (DESCRIPTION.CHANGE)
+        snippet.description = DESCRIPTION.PREFIX +
+            getEntity(DESCRIPTION.ENTITY_ID, statistics) + DESCRIPTION.POSTFIX
+    if (!TITLE.CHANGE && DESCRIPTION.CHANGE)
+        throw "Atleast one amoung title and discription must be changed";
+    return snippet
+}
+
+export const updateViews = functions.https.onRequest((request: any, response) => {
+    let auth: any;
+    login().then((aut) => auth = aut)
+        .then((_) => getDetails(auth))
+        .then(getSnippet)
+        .then((snippet) => setDetails(auth, snippet))
+        .then((res) => response.end("Mission Success"))
+        .catch((error: any) => {
+            console.error(error);
+            response.send(error);
+        });
 });
