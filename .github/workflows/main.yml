@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Install Dependencies
-      run: npm install tslint tsc typescript -g
+      run: cd functions && npm install tslint tsc typescript -g
     - uses: actions/checkout@master
     - uses: actions/setup-node@master
       with:
