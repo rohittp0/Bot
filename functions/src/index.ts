@@ -17,15 +17,15 @@ const JSON_PATH = CRED_DIR + 'credentials.json'
  */
 async function login() {
     // Load client secrets from a local file.
-    let credentials = JSON.parse(await fs.promises.readFile(JSON_PATH))
+    const credentials = JSON.parse(await fs.promises.readFile(JSON_PATH))
     // Authorize a client with the loaded credentials, then call the YouTube API.
-    var clientSecret = credentials.installed.client_secret;
-    var clientId = credentials.installed.client_id;
-    var redirectUrl = credentials.installed.redirect_uris[0];
-    var oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUrl);
+    const clientSecret = credentials.installed.client_secret;
+    const clientId = credentials.installed.client_id;
+    const redirectUrl = credentials.installed.redirect_uris[0];
+    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUrl);
     try {
         //Check if we have token saved.
-        let token = await fs.promises.readFile(TOKEN_PATH)
+        const token = await fs.promises.readFile(TOKEN_PATH)
         //Found saved token so use it.
         oauth2Client.credentials = JSON.parse(token);
         return oauth2Client;
@@ -43,12 +43,12 @@ async function login() {
  * @returns {Promise<google.auth.OAuth2>}
  */
 function getNewToken(oauth2Client: any): Promise<any> {
-    var authUrl = oauth2Client.generateAuthUrl({
+    const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: SCOPES
     });
     console.log('Authorize this app by visiting this url: ', authUrl);
-    var rl = readline.createInterface({
+    const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
@@ -60,8 +60,8 @@ function getNewToken(oauth2Client: any): Promise<any> {
                 else {
                     oauth2Client.credentials = token;
                     //Store token to disk be used in later program executions.
-                    fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err: any) => {
-                        if (err) reject(err);
+                    fs.writeFile(TOKEN_PATH, JSON.stringify(token), (error: any) => {
+                        if (error) reject(error);
                         else {
                             console.log('Token stored to ' + TOKEN_PATH);
                             resolve(oauth2Client);
@@ -81,14 +81,14 @@ function getNewToken(oauth2Client: any): Promise<any> {
 async function getDetails(auth: any) {
     const service = google.youtube('v3');
 
-    let response = await service.videos.list({
+    const response = await service.videos.list({
         auth: auth,
         id: VIDEO_ID,
         part: 'statistics'
     });
     if (response.data.items)
         return response.data.items[0].statistics;
-    else throw "could not get view count";
+    else throw new Error("could not get view count");
 }
 
 /**
@@ -97,14 +97,14 @@ async function getDetails(auth: any) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  * @returns {Promise<any>} serevrResponse
  */
-async function setDetails(auth: any, snippet: any): Promise<any> {
+async function setDetails(auth: any, Snippet: any): Promise<any> {
     const service = google.youtube('v3');
     return service.videos.update({
         auth: auth,
         part: 'snippet',
         requestBody: {
             id: VIDEO_ID,
-            snippet: snippet
+            snippet: Snippet
         }
     });
 }
@@ -116,18 +116,18 @@ async function setDetails(auth: any, snippet: any): Promise<any> {
  * @returns {snippet} serevrResponse
  */
 function getSnippet(statistics: any): snippet {
-    let snippet: snippet = {
+    const Snippet: snippet = {
         categoryId: 27,
         defaultLanguage: 'en'
     }
     if (TITLE.CHANGE)
-        snippet.title = TITLE.PREFIX + getEntity(TITLE.ENTITY_ID, statistics) + TITLE.POSTFIX
+        Snippet.title = TITLE.PREFIX + getEntity(TITLE.ENTITY_ID, statistics) + TITLE.POSTFIX
     if (DESCRIPTION.CHANGE)
-        snippet.description = DESCRIPTION.PREFIX +
+        Snippet.description = DESCRIPTION.PREFIX +
             getEntity(DESCRIPTION.ENTITY_ID, statistics) + DESCRIPTION.POSTFIX
     if (!TITLE.CHANGE && DESCRIPTION.CHANGE)
-        throw "Atleast one amoung title and discription must be changed";
-    return snippet
+        throw new Error("Atleast one amoung title and discription must be changed");
+    return Snippet
 }
 
 export const updateViews = functions.https.onRequest((request: any, response) => {
@@ -135,7 +135,7 @@ export const updateViews = functions.https.onRequest((request: any, response) =>
     login().then((aut) => auth = aut)
         .then((_) => getDetails(auth))
         .then(getSnippet)
-        .then((snippet) => setDetails(auth, snippet))
+        .then((Snippet) => setDetails(auth, Snippet))
         .then((res) => response.end("Mission Success"))
         .catch((error: any) => {
             console.error(error);
